@@ -1,0 +1,111 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  backend-smoke:
+    name: Backend Smoke Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: Backend
+        run: npm ci
+
+      - name: Validate backend module imports
+        working-directory: Backend
+        run: |
+          node --input-type=module - <<'EOF'
+          await import("./config/db.js");
+          await import("./models/Book.js");
+          await import("./models/BorrowRecord.js");
+          await import("./controllers/authController.js");
+          await import("./controllers/bookController.js");
+          await import("./controllers/borrowController.js");
+          await import("./controllers/studentController.js");
+          await import("./controllers/adminController.js");
+          console.log("Backend modules loaded successfully.");
+          EOF
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: Frontend
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: Frontend/dist
+
+  deploy-bundle:
+    name: Deployment Bundle
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs:
+      - backend-smoke
+      - frontend-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        working-directory: Frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: Frontend
+        run: npm run build
+
+      - name: Create deployment bundle
+        run: |
+          mkdir deploy
+          cp -r Backend deploy/Backend
+          cp -r Frontend/dist deploy/Frontend-dist
+          cp package.json deploy/package.json
+          tar -czf deployment-bundle.tar.gz deploy
+
+      - name: Upload deployment bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-bundle
+          path: deployment-bundle.tar.gz
