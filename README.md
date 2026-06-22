@@ -197,6 +197,27 @@ Import `postman_collection.json` into Postman. It includes login, add-book, borr
 
 ## Deployment Notes
 
+### Vercel
+
+This repository is configured for a single Vercel project:
+
+- Framework preset: `Other`
+- Build command: `npm run vercel-build`
+- Output directory: `Frontend/dist`
+- Install command: `npm install`
+
+Set these environment variables in Vercel:
+
+- `MONGODB_URI` - use MongoDB Atlas or another hosted MongoDB connection string
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `ADMIN_NAME`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `VITE_API_BASE_URL=/api`
+
+The frontend is built from `Frontend/`, and `/api/*` requests are served by the Express app through Vercel serverless functions. After deployment, test `https://<your-vercel-domain>/api/health`.
+
 ### Render / Railway
 
 - Deploy MongoDB separately or use MongoDB Atlas
