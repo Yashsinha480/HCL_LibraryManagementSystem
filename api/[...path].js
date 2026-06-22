@@ -1,7 +1,7 @@
 let appPromise;
 let dbPromise;
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   appPromise ||= import("../Backend/app.js");
 
   const [{ default: app }, { connectDatabase }] = await Promise.all([
@@ -13,4 +13,4 @@ module.exports = async (req, res) => {
   await dbPromise;
 
   return app(req, res);
-};
+}
